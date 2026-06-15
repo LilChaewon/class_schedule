@@ -4,7 +4,7 @@
     {
       "name": "app",
       "runtimeExecutable": "docker",
-      "runtimeArgs": ["compose", "up"],
+      "runtimeArgs": ["compose", "up", "--build"],
       "port": 8080,
       "autoPort": true
     }

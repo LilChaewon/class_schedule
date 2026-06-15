@@ -403,3 +403,7 @@ input{font-family:inherit;letter-spacing:inherit}
 .tree-label.all{font-weight:600;color:var(--accent)}
 .tree-label.dim{color:var(--label2)}
 .tree-row.lv0 > .tree-label{font-weight:600}
+
+/* 부팅 스플래시 (카탈로그 로딩 중) */
+.boot-splash{min-height:60vh;display:flex;align-items:center;justify-content:center;
+  color:var(--label2,#8e8e93);font-size:15px;font-weight:500}

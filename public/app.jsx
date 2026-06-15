@@ -521,8 +521,8 @@ function seedGroups(courses){
 }
 
 // ---------- App ----------
-function App(){
-  const courses=useMemo(()=>window.TT.build(window.COURSES),[]);
+function App({ rawCourses }){
+  const courses=useMemo(()=>window.TT.build(rawCourses),[rawCourses]);
   const courseMap=useMemo(()=>{ const m={}; courses.forEach(c=>m[c.id]=c); return m; },[courses]);
 
   const [placed,setPlaced]=useState(()=>seedPlaced(courses));
@@ -655,5 +655,25 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "radius": 18
 }/*EDITMODE-END*/;
 
-Object.assign(window,{ Icon, App });
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+// ---------- Root: Supabase 활성 카탈로그 로드 → 없으면 번들 courses.js 폴백 ----------
+function Root(){
+  const [raw,setRaw]=useState(null);
+  useEffect(()=>{
+    let alive=true;
+    const env=window.__ENV__||{};
+    const fallback=()=>{ if(alive) setRaw(window.COURSES); };
+    if(!env.SUPABASE_URL||!env.SUPABASE_ANON_KEY){ fallback(); return; }
+    fetch(env.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/course_catalog?select=data&active=eq.true&limit=1',
+      { headers:{ apikey:env.SUPABASE_ANON_KEY, Authorization:'Bearer '+env.SUPABASE_ANON_KEY } })
+      .then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(rows=>{ const d=rows&&rows[0]&&rows[0].data;
+        if(alive) setRaw(Array.isArray(d)&&d.length?d:window.COURSES); })
+      .catch(()=>fallback());
+    return ()=>{ alive=false; };
+  },[]);
+  if(!raw) return <div className="boot-splash">시간표를 불러오는 중…</div>;
+  return <App rawCourses={raw}/>;
+}
+
+Object.assign(window,{ Icon, App, Root });
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);

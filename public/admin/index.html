@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시간표 마법사 · 관리자</title>
+<style>
+  :root{ --accent:#3b4a6b; --bg:#f2f2f7; --card:#fff; --line:#e5e5ea;
+    --label:#1c1c1e; --label2:#6c6c70; --label3:#aeaeb2; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--label);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:680px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:26px;font-weight:800;margin:0 0 4px}
+  .sub{color:var(--label2);font-size:14px;margin:0 0 24px}
+  .card{background:var(--card);border:.5px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+  label.fld{display:block;font-size:13px;color:var(--label2);font-weight:600;margin:0 0 6px}
+  input[type=password],input[type=text]{width:100%;height:44px;padding:0 14px;border:1px solid var(--line);
+    border-radius:11px;font-size:16px;background:#fff;outline:none}
+  input:focus{border-color:var(--accent)}
+  button{appearance:none;border:0;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;
+    padding:12px 18px;background:var(--accent);color:#fff}
+  button.ghost{background:#ececef;color:var(--label)}
+  button:disabled{opacity:.45;cursor:default}
+  .row{display:flex;gap:10px;align-items:center}
+  .hide{display:none}
+  .msg{font-size:14px;margin-top:12px;padding:10px 12px;border-radius:10px}
+  .msg.err{background:#fdecea;color:#b3261e}
+  .msg.ok{background:#e7f4ec;color:#1f6b3b}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+  .stat{background:#f7f7fa;border-radius:12px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:22px}
+  .stat span{font-size:12px;color:var(--label2)}
+  .file-drop{border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--label2);
+    font-size:14px;background:#fafafc}
+  .dept-list{max-height:200px;overflow:auto;font-size:13px;color:var(--label2);
+    border-top:.5px solid var(--line);margin-top:12px;padding-top:10px}
+  .dept-list div{padding:2px 0}
+  code{background:#f0f0f3;padding:1px 5px;border-radius:5px;font-size:12px}
+  a.back{color:var(--accent);font-size:14px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← 시간표로</a>
+  <h1 style="margin-top:10px">관리자 · 강의 데이터 관리</h1>
+  <p class="sub">학교 시간표 CSV를 업로드하면 파싱해서 앱에 반영합니다.</p>
+
+  <!-- 1) 로그인 -->
+  <div class="card" id="login-card">
+    <label class="fld" for="pw">관리자 비밀번호</label>
+    <div class="row">
+      <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password">
+      <button id="login-btn">확인</button>
+    </div>
+    <div id="login-msg"></div>
+  </div>
+
+  <!-- 2) 현재 카탈로그 -->
+  <div class="card hide" id="current-card">
+    <label class="fld">현재 적용된 카탈로그</label>
+    <div id="current-info" style="font-size:14px;color:var(--label2)">불러오는 중…</div>
+  </div>
+
+  <!-- 3) 업로드 -->
+  <div class="card hide" id="upload-card">
+    <label class="fld">CSV 업로드</label>
+    <div class="file-drop" id="file-drop">
+      여기로 CSV 파일을 끌어다 놓거나 클릭해서 선택<br>
+      <small>형식: 학교 공식 강의시간표 CSV</small>
+      <input type="file" id="file" accept=".csv,text/csv" style="display:none">
+    </div>
+    <div id="parse-msg"></div>
+
+    <div id="preview" class="hide">
+      <div class="stat-grid">
+        <div class="stat"><b id="s-course">0</b><span>과목</span></div>
+        <div class="stat"><b id="s-sec">0</b><span>분반</span></div>
+        <div class="stat"><b id="s-major">0</b><span>전공</span></div>
+        <div class="stat"><b id="s-ge">0</b><span>교양</span></div>
+      </div>
+      <label class="fld" for="label">라벨 (학기 이름)</label>
+      <input type="text" id="label" value="2026-1" style="margin-bottom:14px">
+      <div class="row">
+        <button id="save-btn">이 데이터로 교체 저장</button>
+        <button class="ghost" id="reset-btn">취소</button>
+      </div>
+      <div id="save-msg"></div>
+      <div class="dept-list" id="dept-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="parse.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
