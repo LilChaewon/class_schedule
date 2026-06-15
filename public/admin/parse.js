@@ -64,10 +64,21 @@
     '교선120':'과학기술과 정보','교선135':'과학기술과 정보','교선162':'과학기술과 정보','교선165':'과학기술과 정보','교선170':'과학기술과 정보','교선172':'과학기술과 정보'
   };
 
-  function classify(code) {
+  // 과목명으로 핵심교양 4분야 자동 추정 (새 학수번호에도 적용). 순서가 충돌 해소 규칙:
+  //  역사·철학 → 문화·예술 → 과학기술·정보 → 사회·공동체 (먼저 맞는 것 채택)
+  function guessHaekSub(name) {
+    var n = name || '';
+    if (/철학|역사|문명|논증|문화유산|근현대사|한국현대사|가치/.test(n)) return '역사와 철학';
+    if (/예술|문화|인문학|고전|스토리텔링|창조성/.test(n)) return '문화와 예술';
+    if (/환경|우주|생명|컴퓨팅|코딩|인공지능|AI|데이터|파이썬|프로그래밍|과학|기술|소프트|정보/.test(n)) return '과학기술과 정보';
+    if (/사회|공동체|민주주의|심리|커뮤니케이션|다양성|세계화|미래이슈|창업/.test(n)) return '사회와 공동체';
+    return null;
+  }
+
+  function classify(code, name) {
     code = code || '';
     if (code.indexOf('교필') === 0) return { cat: '교양', ar: '공통교양' };
-    if (code.indexOf('교선') === 0) return { cat: '교양', ar: '핵심교양', ar2: HAEK_SUB[code] || null };
+    if (code.indexOf('교선') === 0) return { cat: '교양', ar: '핵심교양', ar2: HAEK_SUB[code] || guessHaekSub(name) || null };
     if (code.indexOf('균') === 0) return { cat: '교양', ar: '일반교양' };
     return { cat: '전공', ar: null };
   }
@@ -116,7 +127,7 @@
       if (name) {
         // 새 과목
         var code = clean(f[3]);
-        var cl = classify(code);
+        var cl = classify(code, name);
         // 단과대학: 교양은 '교양', 자연캠퍼스 블록의 전공은 '자연캠퍼스', 그 외는 매핑.
         var cg = cl.cat === '교양' ? '교양'
                : (dept === '자연캠퍼스' ? '자연캠퍼스' : (DEPT_COLLEGE[dept] || dept));
