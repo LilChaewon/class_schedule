@@ -179,7 +179,7 @@ function TimeGridModal({ initial, onApply, onClose }){
 }
 
 // ---------- search sheet (section mode = editor, group mode = wizard) ----------
-function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose, onPreview }){
+function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose, onPreview, placed, preview }){
   const previewSec=(c,s)=>{ if(onPreview) onPreview({name:c.name,color:c.color,meets:s.meets}); };
   const previewCourse=(c)=>{ if(onPreview&&c.sections[0]) onPreview({name:c.name,color:c.color,meets:c.sections[0].meets}); };
   const clearPreview=()=>{ if(onPreview) onPreview(null); };
@@ -230,6 +230,11 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
             <h3>{mode==='group'?'후보 과목 추가':'과목 추가'}</h3>
             <button className="btn-plain" onClick={close} style={{fontWeight:600}}>완료</button>
           </div>
+          {mode==='section' && (
+            <div className="sheet-tt">
+              <Timetable picks={placed||[]} range={[9,18]} ghost={preview}/>
+            </div>
+          )}
           <div className="searchbar">
             <span style={{color:'var(--label3)',display:'flex'}}><Icon name="search" size={18}/></span>
             <input ref={inputRef} value={q} onChange={e=>setQ(e.target.value)} placeholder="과목명 · 학수번호 · 교수 · 학부"/>
@@ -279,7 +284,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
             const placedHere=c.sections.some(s=>placedKeys.has(c.id+'_'+s.sec));
             return (
               <div key={c.id}>
-                <div className="res-row expandable" onClick={()=>setOpen(isOpen?null:c.id)}
+                <div className="res-row expandable" onClick={()=>{ setOpen(isOpen?null:c.id); previewCourse(c); }}
                   onMouseEnter={()=>previewCourse(c)} onMouseLeave={clearPreview}>
                   <span className="swatch" style={{background:c.color.fill,borderColor:c.color.bd}}></span>
                   <div className="res-main">
@@ -302,6 +307,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
                             <div className="so-top">{s.sec}분반 · {s.prof}</div>
                             <div className="so-sub">{window.TT.summarizeMeets(s.meets)}{s.cap?` · 정원 ${s.cap}`:''}</div>
                           </div>
+                          <span className={"seat-dot"+(s.cap>0?" ok":" full")} title={s.cap>0?`정원 ${s.cap}`:'정원 마감'}></span>
                           <span className="so-ico"><Icon name={on?"check":"plus"} size={16}/></span>
                         </button>
                       );
@@ -647,6 +653,7 @@ function App({ rawCourses }){
 
       {search && <SearchSheet courses={courses} mode={search.mode}
         group={searchGroup} placedKeys={placedKeys} onPreview={setPreview}
+        placed={placed} preview={preview}
         onPickCourse={toggleCourseInGroup} onPickSection={togglePlace}
         onClose={()=>{ setPreview(null); setSearch(null); }}/>}
 
