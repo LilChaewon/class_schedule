@@ -31,7 +31,7 @@
   function build(raw){
     const courses = raw.map(c=>({
       id:c.id, name:c.n, code:c.co, credit:c.cr, dept:c.dp, cat:c.cat,
-      area:c.ar||null, grade:c.gr||'전학년', college:c.cg||'',
+      area:c.ar||null, area2:c.ar2||null, grade:c.gr||'전학년', college:c.cg||'',
       sections: c.s.map(s=>({
         sec:s.sec, prof:s.p||'미정', cap:s.cap,
         meets: s.m.map(m=>({d:m[0], s:m[1], e:m[2], room:m[3]||''}))

@@ -190,6 +190,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
   const [deptSel,setDeptSel]=useState(null);
   const [deptOpen,setDeptOpen]=useState(false);
   const [area,setArea]=useState('전체');
+  const [sub,setSub]=useState('전체');           // 핵심교양 하위영역
   const [timeSel,setTimeSel]=useState(()=>new Set());
   const [timeOpen,setTimeOpen]=useState(false);
   const [open,setOpen]=useState(null);
@@ -197,7 +198,8 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
   useEffect(()=>{ const t=setTimeout(()=>setShow(true),20); setTimeout(()=>inputRef.current&&inputRef.current.focus(),340); return ()=>clearTimeout(t); },[]);
   const close=()=>{ setShow(false); setTimeout(onClose,300); };
 
-  const pickCat=(c)=>{ setCat(c); setDeptSel(null); setArea('전체'); };
+  const pickCat=(c)=>{ setCat(c); setDeptSel(null); setArea('전체'); setSub('전체'); };
+  const pickArea=(a)=>{ setArea(a); setSub('전체'); };
 
   const results = useMemo(()=>{
     const kw=q.trim().toLowerCase(); let list=courses;
@@ -209,12 +211,13 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
       else list=list.filter(c=>c.dept===deptSel.value);
     }
     if(cat==='교양'&&area!=='전체') list=list.filter(c=>c.area===area);
+    if(cat==='교양'&&area==='핵심교양'&&sub!=='전체') list=list.filter(c=>c.area2===sub);
     if(timeSel.size) list=list.filter(c=>c.sections.some(s=>fitsTime(s.meets,timeSel)));
     if(kw) list=list.filter(c=>
       c.name.toLowerCase().includes(kw)||(c.code||'').toLowerCase().includes(kw)||c.dept.toLowerCase().includes(kw)||
       c.sections.some(s=>(s.prof||'').toLowerCase().includes(kw)));
     return list;
-  },[q,cat,grade,deptSel,area,timeSel,courses]);
+  },[q,cat,grade,deptSel,area,sub,timeSel,courses]);
 
   const RENDER_CAP = 150;
   const shown = useMemo(()=>results.slice(0,RENDER_CAP),[results]);
@@ -257,10 +260,17 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
             {cat!=='교양' && ['전체','1학년','2학년','3학년','4학년'].map(g=>(
               <button key={g} className={"fchip"+(grade===g?" on":"")} onClick={()=>setGrade(g)}>{g==='전체'?'학년 전체':g}</button>
             ))}
-            {cat==='교양' && ['전체','교양필수','교양선택','균형교양'].map(a=>(
-              <button key={a} className={"fchip"+(area===a?" on":"")} onClick={()=>setArea(a)}>{a==='전체'?'영역 전체':a}</button>
+            {cat==='교양' && ['전체','교양필수','핵심교양','균형교양'].map(a=>(
+              <button key={a} className={"fchip"+(area===a?" on":"")} onClick={()=>pickArea(a)}>{a==='전체'?'영역 전체':a}</button>
             ))}
           </div>
+          {cat==='교양' && area==='핵심교양' && (
+            <div className="filter-row">
+              {['전체','역사와 철학','사회와 공동체','문화와 예술','과학기술과 정보'].map(s=>(
+                <button key={s} className={"fchip"+(sub===s?" on":"")} onClick={()=>setSub(s)}>{s==='전체'?'분야 전체':s}</button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="sheet-body">
           {results.length===0 && <div className="empty-note">검색 결과가 없어요.<br/>다른 키워드로 찾아보세요.</div>}
