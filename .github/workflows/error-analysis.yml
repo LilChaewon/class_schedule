@@ -1,0 +1,34 @@
+name: 에러 로그 자동 분석
+
+# 매일 09:00 KST(00:00 UTC) + 수동 실행. Supabase 의 error_logs 를 읽어 Claude 로 분석합니다.
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: "분석 구간(시간)"
+        default: "24"
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 에러 로그 분석 실행
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || '24' }}
+        run: node scripts/analyze-errors.mjs | tee report.md
+
+      - name: 리포트 아티팩트 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-report
+          path: report.md

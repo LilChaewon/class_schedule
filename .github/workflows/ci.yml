@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker 이미지 빌드
+        run: docker compose build
+
+      - name: 앱 기동
+        run: docker compose up -d
+
+      - name: 헬스체크 대기
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null; then echo "up"; exit 0; fi
+            sleep 2
+          done
+          echo "앱이 뜨지 않았습니다"; docker compose logs; exit 1
+
+      - name: 스모크 테스트 (index 렌더 확인)
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q "시간표 마법사"
+          for f in courses.js lib.js app.jsx results.jsx config.js error-reporter.js styles.css; do
+            curl -fsS "http://localhost:8080/$f" >/dev/null && echo "✓ $f"
+          done
+
+      - name: 종료
+        if: always()
+        run: docker compose down
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: JS/JSX 구문 검사 (babel 트랜스폼으로 파싱)
+        run: |
+          npm i -g @babel/core @babel/cli @babel/preset-react >/dev/null 2>&1
+          for f in public/app.jsx public/results.jsx public/tweaks-panel.jsx; do
+            npx babel --presets @babel/preset-react "$f" >/dev/null && echo "✓ $f"
+          done
+          node --check public/lib.js && echo "✓ lib.js"
+          node --check public/error-reporter.js && echo "✓ error-reporter.js"
+          node --check scripts/analyze-errors.mjs && echo "✓ analyze-errors.mjs"

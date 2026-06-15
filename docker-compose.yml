@@ -1,0 +1,20 @@
+# 시간표 마법사 — 로컬 실행: `docker compose up` (또는 `make up`)
+#                   종료:     `docker compose down` (또는 `make down`)
+services:
+  web:
+    build: .
+    container_name: timetable-wizard
+    ports:
+      - "${PORT:-8080}:80"
+    # .env 파일이 있으면 자동으로 읽혀 config.js 에 주입됩니다 (없어도 동작).
+    environment:
+      SUPABASE_URL: "${SUPABASE_URL:-}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-}"
+      APP_ENV: "${APP_ENV:-local}"
+      RELEASE: "${RELEASE:-dev}"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
