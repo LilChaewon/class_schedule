@@ -210,8 +210,11 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
     if(kw) list=list.filter(c=>
       c.name.toLowerCase().includes(kw)||(c.code||'').toLowerCase().includes(kw)||c.dept.toLowerCase().includes(kw)||
       c.sections.some(s=>(s.prof||'').toLowerCase().includes(kw)));
-    return list.slice(0,80);
+    return list;
   },[q,cat,grade,deptSel,area,timeSel,courses]);
+
+  const RENDER_CAP = 150;
+  const shown = useMemo(()=>results.slice(0,RENDER_CAP),[results]);
 
   const inGroup = mode==='group' ? new Set(group.courseIds) : null;
 
@@ -253,7 +256,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
         </div>
         <div className="sheet-body">
           {results.length===0 && <div className="empty-note">검색 결과가 없어요.<br/>다른 키워드로 찾아보세요.</div>}
-          {results.map(c=>{
+          {shown.map(c=>{
             if(mode==='group'){
               const added=inGroup.has(c.id);
               return (
@@ -303,6 +306,11 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
               </div>
             );
           })}
+          {results.length>shown.length && (
+            <div className="empty-note" style={{padding:'14px 0'}}>
+              {results.length}개 중 {shown.length}개 표시 중 · 검색어나 필터로 좁혀 보세요.
+            </div>
+          )}
         </div>
       </div>
       {timeOpen && <TimeGridModal initial={timeSel} onApply={setTimeSel} onClose={()=>setTimeOpen(false)}/>}
