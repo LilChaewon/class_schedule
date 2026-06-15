@@ -95,6 +95,22 @@ Supabase 는 공식 **MCP 서버**를 제공합니다. Claude Code/Desktop 에 S
 
 ---
 
+## 관리자 페이지 (강의 데이터 교체)
+
+매 학기 강의 CSV를 직접 갈아끼울 수 있는 숨은 관리자 페이지.
+
+- 주소: **/admin** (메인 화면엔 링크 없음 — 주소 아는 사람만 접근)
+- 비밀번호 게이트로 진입 → 학교 공식 시간표 **CSV 업로드** → 파싱·미리보기 → 저장
+- 저장하면 Supabase `course_catalog`(active 1건)에 들어가고, 앱은 시작 시 이걸 받아옴.
+  없으면 번들 `courses.js` 로 폴백.
+- **비밀번호는 서버단(`save_catalog`/`check_admin` RPC, SECURITY DEFINER)에서 검증** —
+  anon 키가 공개여도 DB에 직접 못 씀(RLS deny). 비번은 `admin_secret` 테이블에 저장, 변경 가능.
+- 파서: `public/admin/parse.js` (이 학교 CSV 형식 전용). 기존 데이터와 분반/교시 100% 일치 검증됨.
+  단과대학 매핑은 코드 내 표(`DEPT_COLLEGE`)로 관리.
+
+비밀번호 변경(예시): Supabase SQL Editor 에서
+`update admin_secret set password='새비번' where id=1;`
+
 ## 배포 (Vercel)
 
 정적 앱이라 빌드 시 `vercel-build.sh` 가 환경변수로 `config.js` 를 생성해 서빙합니다.
