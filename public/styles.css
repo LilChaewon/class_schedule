@@ -407,3 +407,17 @@ input{font-family:inherit;letter-spacing:inherit}
 /* 부팅 스플래시 (카탈로그 로딩 중) */
 .boot-splash{min-height:60vh;display:flex;align-items:center;justify-content:center;
   color:var(--label2,#8e8e93);font-size:15px;font-weight:500}
+
+/* 검색 시트: 에디터(section 모드)에선 우측 패널로 도킹해 시간표가 안 가리게 (데스크탑) */
+@media(min-width:760px){
+  .scrim.side{align-items:stretch;justify-content:flex-end;background:rgba(0,0,0,.04);backdrop-filter:none}
+  .scrim.side .sheet{height:100vh;max-height:100vh;max-width:420px;width:42vw;
+    border-radius:18px 0 0 18px;transform:translateX(100%)}
+  .scrim.side.show .sheet{transform:none}
+  .scrim.side .sheet-grip{display:none}
+}
+
+/* 격자 호버 미리보기(고스트) 블록 */
+.tt-block.tt-ghost{border-style:dashed;border-width:1.6px;opacity:.92;pointer-events:none;z-index:4;
+  box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.tt-block.tt-ghost .b-name{font-weight:700}

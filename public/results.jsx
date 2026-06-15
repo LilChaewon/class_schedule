@@ -2,9 +2,11 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 // ---------- reusable Timetable ----------
-function Timetable({ picks, mini, nano, range, onBlockRemove }){
+function Timetable({ picks, mini, nano, range, onBlockRemove, ghost }){
   let { start, end, showSat } = window.TT.rangeFor(picks);
   if(range){ start=Math.min(start,range[0]); end=Math.max(end,range[1]); }
+  if(ghost && ghost.meets){ ghost.meets.forEach(m=>{
+    start=Math.min(start,Math.floor(m.s/60)); end=Math.max(end,Math.ceil(m.e/60)); if(m.d===5) showSat=true; }); }
   const hours = [];
   for(let h=start; h<=end; h++) hours.push(h);
   const days = showSat ? [0,1,2,3,4,5] : [0,1,2,3,4];
@@ -49,6 +51,18 @@ function Timetable({ picks, mini, nano, range, onBlockRemove }){
                     {!nano && <div className="b-name">{b.p.name}</div>}
                     {!mini && !nano && hgt>34 && <div className="b-meta">{window.TT.fmt(b.s)}–{window.TT.fmt(b.e)}{b.room?' · '+b.room:''}</div>}
                     {onBlockRemove && <button className="b-x" onClick={(e)=>{e.stopPropagation(); onBlockRemove(b.p);}}><Icon name="x" size={12}/></button>}
+                  </div>
+                );
+              })}
+              {ghost && ghost.meets && ghost.meets.filter(m=>m.d===d).map((m,gi)=>{
+                const top=(m.s-start*60)/60*rowH, hgt=(m.e-m.s)/60*rowH;
+                const c=ghost.color;
+                return (
+                  <div className="tt-block tt-ghost" key={'g'+gi}
+                    style={{top:top+'px', height:(hgt-(nano?1:2))+'px',
+                      borderColor:c?c.bd:'var(--accent)', color:c?c.tx:'var(--accent)',
+                      background:c?c.fill:'var(--fill)'}}>
+                    {!nano && <div className="b-name">{ghost.name}</div>}
                   </div>
                 );
               })}

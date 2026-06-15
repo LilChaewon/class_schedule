@@ -179,7 +179,10 @@ function TimeGridModal({ initial, onApply, onClose }){
 }
 
 // ---------- search sheet (section mode = editor, group mode = wizard) ----------
-function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose }){
+function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose, onPreview }){
+  const previewSec=(c,s)=>{ if(onPreview) onPreview({name:c.name,color:c.color,meets:s.meets}); };
+  const previewCourse=(c)=>{ if(onPreview&&c.sections[0]) onPreview({name:c.name,color:c.color,meets:c.sections[0].meets}); };
+  const clearPreview=()=>{ if(onPreview) onPreview(null); };
   const [show,setShow]=useState(false);
   const [q,setQ]=useState('');
   const [cat,setCat]=useState('전체');
@@ -219,7 +222,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
   const inGroup = mode==='group' ? new Set(group.courseIds) : null;
 
   return (
-    <div className={"scrim"+(show?" show":"")} onClick={close}>
+    <div className={"scrim"+(show?" show":"")+(mode==='section'?" side":"")} onClick={close}>
       <div className="sheet" onClick={e=>e.stopPropagation()}>
         <div className="sheet-grip"></div>
         <div className="sheet-head">
@@ -276,7 +279,8 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
             const placedHere=c.sections.some(s=>placedKeys.has(c.id+'_'+s.sec));
             return (
               <div key={c.id}>
-                <div className="res-row expandable" onClick={()=>setOpen(isOpen?null:c.id)}>
+                <div className="res-row expandable" onClick={()=>setOpen(isOpen?null:c.id)}
+                  onMouseEnter={()=>previewCourse(c)} onMouseLeave={clearPreview}>
                   <span className="swatch" style={{background:c.color.fill,borderColor:c.color.bd}}></span>
                   <div className="res-main">
                     <div className="res-title">{c.name}
@@ -292,7 +296,8 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
                     {(timeSel.size?c.sections.filter(s=>fitsTime(s.meets,timeSel)):c.sections).map(s=>{
                       const key=c.id+'_'+s.sec, on=placedKeys.has(key);
                       return (
-                        <button className={"sec-opt"+(on?" on":"")} key={key} onClick={()=>onPickSection(c,s)}>
+                        <button className={"sec-opt"+(on?" on":"")} key={key} onClick={()=>onPickSection(c,s)}
+                          onMouseEnter={()=>previewSec(c,s)} onMouseLeave={clearPreview}>
                           <div className="so-main">
                             <div className="so-top">{s.sec}분반 · {s.prof}</div>
                             <div className="so-sub">{window.TT.summarizeMeets(s.meets)}{s.cap?` · 정원 ${s.cap}`:''}</div>
@@ -396,7 +401,7 @@ function Toast({ msg }){
 }
 
 // ---------- editor (home) ----------
-function EditorScreen({ placed, totalCredit, onAdd, onWizard, onRemove, onSaveImage, onSavePdf }){
+function EditorScreen({ placed, totalCredit, onAdd, onWizard, onRemove, onSaveImage, onSavePdf, preview }){
   return (
     <React.Fragment>
       <div className="largetitle">
@@ -419,7 +424,7 @@ function EditorScreen({ placed, totalCredit, onAdd, onWizard, onRemove, onSaveIm
               <button className="btn btn-gray sm-btn" disabled={!placed.length} onClick={onSavePdf}><Icon name="doc" size={17}/> PDF 저장</button>
             </div>
             <div className="card" style={{overflow:'hidden',padding:'10px 8px 8px'}}>
-              <Timetable picks={placed} range={[9,18]} onBlockRemove={onRemove}/>
+              <Timetable picks={placed} range={[9,18]} onBlockRemove={onRemove} ghost={preview}/>
             </div>
             <p className="grid-hint">블록의 × 버튼을 누르면 시간표에서 빼요.</p>
           </div>
@@ -536,6 +541,7 @@ function App({ rawCourses }){
   const [placed,setPlaced]=useState(()=>seedPlaced(courses));
   const [groups,setGroups]=useState(()=>seedGroups(courses));
   const [search,setSearch]=useState(null);      // {mode:'section'} | {mode:'group',gid}
+  const [preview,setPreview]=useState(null);     // 격자 호버 미리보기 {name,color,meets}
   const [wizOpen,setWizOpen]=useState(false);
   const [wizVisible,setWizVisible]=useState(false);
   const [calc,setCalc]=useState(null);
@@ -564,6 +570,7 @@ function App({ rawCourses }){
       showToast(`${cf?cf.name:'다른 수업'}과 시간이 겹쳐요`); return;
     }
     setPlaced(ps=>[...ps,opt]);
+    setPreview(null);
   }
   const removePlaced=(p)=>setPlaced(ps=>ps.filter(x=>x.key!==p.key));
 
@@ -628,7 +635,7 @@ function App({ rawCourses }){
         </div>
       </div>
 
-      <EditorScreen placed={placed} totalCredit={totalCredit}
+      <EditorScreen placed={placed} totalCredit={totalCredit} preview={preview}
         onAdd={()=>setSearch({mode:'section'})} onWizard={openWizard} onRemove={removePlaced}
         onSaveImage={saveImage} onSavePdf={savePdf}/>
 
@@ -639,8 +646,9 @@ function App({ rawCourses }){
       {results && <ResultsScreen data={results} visible={resVisible} onBack={backFromResults} onPick={pickResult}/>}
 
       {search && <SearchSheet courses={courses} mode={search.mode}
-        group={searchGroup} placedKeys={placedKeys}
-        onPickCourse={toggleCourseInGroup} onPickSection={togglePlace} onClose={()=>setSearch(null)}/>}
+        group={searchGroup} placedKeys={placedKeys} onPreview={setPreview}
+        onPickCourse={toggleCourseInGroup} onPickSection={togglePlace}
+        onClose={()=>{ setPreview(null); setSearch(null); }}/>}
 
       {calc && <CalcOverlay target={calc.target} onDone={calcDone}/>}
       {toast && <Toast msg={toast}/>}
