@@ -510,33 +510,19 @@ function WizardScreen({ visible, groups, courseMap, stats, onBack, onRename, onR
 }
 
 // ---------- seeds ----------
+// 기본은 빈 시간표 — 데모 과목 없음.
 function seedPlaced(courses){
-  const out=[], occ=[];
-  const add=(c)=>{ if(!c) return; const s=c.sections.find(s=>s.meets.length); if(!s) return;
-    if(occ.length && window.TT.meetsConflict(s.meets,occ)) return; out.push(makeOpt(c,s)); occ.push(...s.meets); };
-  const majors=courses.filter(c=>c.cat==='전공');
-  const ges=courses.filter(c=>c.cat==='교양'&&c.credit>=2&&!/채플/.test(c.name));
-  const byDept={}; majors.forEach(c=>{(byDept[c.dept]=byDept[c.dept]||[]).push(c);});
-  const dept=Object.keys(byDept).sort((a,b)=>byDept[b].length-byDept[a].length)[0];
-  const pool=byDept[dept]||majors;
-  add(pool[0]); add(pool[1]); add(ges[3]);
-  return out;
+  return [];
 }
 let GID=10;
+// 마법사: 그룹 1에 채플(전체 분반)만 기본 후보로, 그룹 2·3은 빈 채로.
 function seedGroups(courses){
   const chapel=courses.find(c=>c.name==='채플');
-  const majors=courses.filter(c=>c.cat==='전공');
-  const ges=courses.filter(c=>c.cat==='교양'&&c.credit>=2&&!/채플/.test(c.name));
-  const byDept={}; majors.forEach(c=>{(byDept[c.dept]=byDept[c.dept]||[]).push(c);});
-  const dept=Object.keys(byDept).sort((a,b)=>byDept[b].length-byDept[a].length).find(d=>byDept[d].length>=4)||Object.keys(byDept)[0];
-  const pool=byDept[dept]||[];
-  const sel=pool.slice(0,3);
-  const gePick=[ges[3],ges[11]].filter(Boolean);
-  const g=[];
-  if(chapel) g.push({id:'g1',name:'그룹 1',courseIds:[chapel.id]});
-  if(sel.length) g.push({id:'g2',name:'그룹 2',courseIds:sel.map(c=>c.id)});
-  if(gePick.length) g.push({id:'g3',name:'그룹 3',courseIds:gePick.map(c=>c.id)});
-  return g.length?g:[{id:'g1',name:'그룹 1',courseIds:[]}];
+  return [
+    {id:'g1',name:'그룹 1',courseIds:chapel?[chapel.id]:[]},
+    {id:'g2',name:'그룹 2',courseIds:[]},
+    {id:'g3',name:'그룹 3',courseIds:[]}
+  ];
 }
 
 // ---------- App ----------
