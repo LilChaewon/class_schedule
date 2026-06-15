@@ -1,5 +1,7 @@
 # 시간표 마법사 (Timetable Wizard)
 
+**🔗 배포 링크: https://classschedule-ten.vercel.app**
+
 2026학년도 1학기 실제 강의 데이터(691과목·1,259분반)를 기반으로, 과목을 직접 담아
 시간표를 짜거나 **마법사**로 모든 조합을 자동 생성해 최적의 시간표를 찾아주는 웹앱.
 
@@ -92,6 +94,17 @@ Supabase 는 공식 **MCP 서버**를 제공합니다. Claude Code/Desktop 에 S
 ```
 
 ---
+
+## 배포 (Vercel)
+
+정적 앱이라 빌드 시 `vercel-build.sh` 가 환경변수로 `config.js` 를 생성해 서빙합니다.
+
+- 배포 URL: **https://classschedule-ten.vercel.app**
+- 재배포: `vercel --prod` (Vercel 프로젝트: `lilchaewons-projects/class_schedule`)
+- Vercel 프로젝트 환경변수(Production): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_ENV`
+  (※ `service_role` 키는 Vercel 에 넣지 않습니다 — 프론트엔드에 필요 없음)
+- Deployment Protection 은 공개 접속을 위해 해제돼 있습니다.
+- GitHub 자동배포를 원하면 Vercel 대시보드 → Project → Settings → Git 에서 저장소 연결.
 
 ## 환경변수 요약
 `.env.example` 참고 (`cp .env.example .env`).
