@@ -260,7 +260,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
             {cat!=='교양' && ['전체','1학년','2학년','3학년','4학년'].map(g=>(
               <button key={g} className={"fchip"+(grade===g?" on":"")} onClick={()=>setGrade(g)}>{g==='전체'?'학년 전체':g}</button>
             ))}
-            {cat==='교양' && ['전체','교양필수','핵심교양','균형교양'].map(a=>(
+            {cat==='교양' && ['전체','공통교양','핵심교양','일반교양'].map(a=>(
               <button key={a} className={"fchip"+(area===a?" on":"")} onClick={()=>pickArea(a)}>{a==='전체'?'영역 전체':a}</button>
             ))}
           </div>

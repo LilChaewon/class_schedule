@@ -66,9 +66,9 @@
 
   function classify(code) {
     code = code || '';
-    if (code.indexOf('교필') === 0) return { cat: '교양', ar: '교양필수' };
+    if (code.indexOf('교필') === 0) return { cat: '교양', ar: '공통교양' };
     if (code.indexOf('교선') === 0) return { cat: '교양', ar: '핵심교양', ar2: HAEK_SUB[code] || null };
-    if (code.indexOf('균') === 0) return { cat: '교양', ar: '균형교양' };
+    if (code.indexOf('균') === 0) return { cat: '교양', ar: '일반교양' };
     return { cat: '전공', ar: null };
   }
 
