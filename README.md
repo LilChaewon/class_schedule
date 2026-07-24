@@ -2,7 +2,7 @@
 
 **🔗 배포 링크: https://classschedule-ten.vercel.app**
 
-2026학년도 1학기 실제 강의 데이터(691과목·1,259분반)를 기반으로, 과목을 직접 담아
+실제 강의 데이터를 기반으로, 과목을 직접 담아
 시간표를 짜거나 **마법사**로 모든 조합을 자동 생성해 최적의 시간표를 찾아주는 웹앱.
 
 - **내 시간표(홈)** — `과목 추가`로 분반을 골라 바로 올리고, 블록의 ×로 빼기. 시간 충돌 자동 차단.
@@ -95,21 +95,6 @@ Supabase 는 공식 **MCP 서버**를 제공합니다. Claude Code/Desktop 에 S
 
 ---
 
-## 관리자 페이지 (강의 데이터 교체)
-
-매 학기 강의 CSV를 직접 갈아끼울 수 있는 숨은 관리자 페이지.
-
-- 주소: **/admin** (메인 화면엔 링크 없음 — 주소 아는 사람만 접근)
-- 비밀번호 게이트로 진입 → 학교 공식 시간표 **CSV 업로드** → 파싱·미리보기 → 저장
-- 저장하면 Supabase `course_catalog`(active 1건)에 들어가고, 앱은 시작 시 이걸 받아옴.
-  없으면 번들 `courses.js` 로 폴백.
-- **비밀번호는 서버단(`save_catalog`/`check_admin` RPC, SECURITY DEFINER)에서 검증** —
-  anon 키가 공개여도 DB에 직접 못 씀(RLS deny). 비번은 `admin_secret` 테이블에 저장, 변경 가능.
-- 파서: `public/admin/parse.js` (이 학교 CSV 형식 전용). 기존 데이터와 분반/교시 100% 일치 검증됨.
-  단과대학 매핑은 코드 내 표(`DEPT_COLLEGE`)로 관리.
-
-비밀번호 변경(예시): Supabase SQL Editor 에서
-`update admin_secret set password='새비번' where id=1;`
 
 ## 배포 (Vercel)
 
