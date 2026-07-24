@@ -27,6 +27,21 @@
     });
   }
 
+  // 실제 시간표에 같이 보이는 과목들(담은 과목 / 마법사 조합 1개)끼리는
+  // 카탈로그 위치와 무관하게 서로 최대한 구별되는 색을 써야 함.
+  // 10개 색상을 원 둘레에 36°씩 고르게 배치 — 최대 10과목까지 완전히 구별됨.
+  const DISTINCT = [12, 48, 84, 120, 156, 192, 228, 264, 300, 336];
+
+  // picks 배열 내에서 처음 등장하는 순서대로 DISTINCT 팔레트를 배정해 재색칠.
+  function recolorPicks(picks){
+    const seen = {};
+    let i = 0;
+    return picks.map(p=>{
+      if(!(p.courseId in seen)){ seen[p.courseId] = DISTINCT[i % DISTINCT.length]; i++; }
+      return { ...p, color: blockColor(seen[p.courseId]) };
+    });
+  }
+
   // ----- normalize raw COURSES (from courses.js) into rich objects -----
   function build(raw){
     const courses = raw.map(c=>({
@@ -99,7 +114,7 @@
       }
     }
     rec(0, [], []);
-    const scored = results.map(r=>({ picks:r, ...score(r) }));
+    const scored = results.map(r=>({ picks:recolorPicks(r), ...score(r) }));
     return { list: scored, cartesian, capped: results.length >= LIMIT };
   }
 
@@ -197,5 +212,5 @@
   }
 
   window.TT = { DAYS, build, blockColor, COOL, WARM, fmt, summarizeMeets, meetsConflict,
-                generate, score, SORTS, rangeFor, exportTimetable };
+                generate, score, SORTS, rangeFor, exportTimetable, recolorPicks };
 })();

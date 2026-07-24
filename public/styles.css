@@ -97,6 +97,7 @@ input{font-family:inherit;letter-spacing:inherit}
 .sec-sub .ss-sec{font-weight:600;color:var(--label);flex:0 0 auto}
 .sec-sub .ss-prof{color:var(--label2);flex:0 0 auto}
 .sec-sub .ss-time{margin-left:auto;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn.sm{width:22px;height:22px;flex:0 0 22px}
 
 .add-group{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;
   border:1.5px dashed var(--sep-strong);border-radius:var(--radius);color:var(--label2);font-weight:500;
@@ -149,7 +150,7 @@ input{font-family:inherit;letter-spacing:inherit}
 }
 
 /* ---------- search sheet ---------- */
-.scrim{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.28);backdrop-filter:blur(2px);
+.scrim{position:fixed;inset:0;z-index:77;background:rgba(0,0,0,.28);backdrop-filter:blur(2px);
   opacity:0;transition:opacity .26s;display:flex;align-items:flex-end;justify-content:center}
 .scrim.show{opacity:1}
 @media(min-width:760px){.scrim{align-items:center}}

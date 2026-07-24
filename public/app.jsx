@@ -1,6 +1,33 @@
 /* ===== 시간표 마법사 — App · Editor · Wizard · Search · Calc ===== */
 const { useState, useEffect, useRef, useMemo } = React;
 
+// 마법사/검색/결과 같은 화면이 열려있을 때 브라우저 뒤로가기를 누르면
+// 사이트를 나가버리지 않고 가장 위에 열린 화면 하나만 닫히도록, 열릴 때 history
+// 항목을 하나씩 쌓아둔다. popstate는 window에 하나만 붙여서 여러 화면이 동시에
+// 열려있어도(예: 마법사 위에 검색창) 뒤로가기 한 번에 맨 위 화면 하나만 닫는다.
+const backLayers = [];
+let backDepth = 0;
+window.addEventListener('popstate', (e)=>{
+  const target = (e.state && e.state.ttDepth) || 0;
+  while(backLayers.length > target){ const fn = backLayers.pop(); if(fn) fn(); }
+  backDepth = target;
+});
+function useBackClose(isOpen, onClose){
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(()=>{
+    if(!isOpen) return;
+    const entry = ()=>closeRef.current();
+    backDepth++;
+    history.pushState({ttDepth:backDepth}, '');
+    backLayers.push(entry);
+    return ()=>{
+      const idx = backLayers.lastIndexOf(entry);
+      if(idx!==-1){ backLayers.splice(idx,1); backDepth--; history.back(); }
+    };
+  },[isOpen]);
+}
+
 // ---------- icons ----------
 function Icon({ name, size=20 }){
   const p = { width:size, height:size, viewBox:'0 0 24 24', fill:'none',
@@ -24,9 +51,13 @@ function makeOpt(c, s){
   return { key:c.id+'_'+s.sec, courseId:c.id, name:c.name, code:c.code, cat:c.cat,
     hue:c.hue, color:c.color, sec:s.sec, prof:s.prof, credit:c.credit, meets:s.meets };
 }
-function buildOptions(courseIds, courseMap){
-  const opts=[];
-  courseIds.forEach(cid=>{ const c=courseMap[cid]; if(!c) return; c.sections.forEach(s=>opts.push(makeOpt(c,s))); });
+function buildOptions(courseIds, courseMap, excludedSecs){
+  const opts=[]; const excl=excludedSecs||{};
+  courseIds.forEach(cid=>{
+    const c=courseMap[cid]; if(!c) return;
+    const ex=excl[cid]||[];
+    c.sections.forEach(s=>{ if(!ex.includes(s.sec)) opts.push(makeOpt(c,s)); });
+  });
   return opts;
 }
 
@@ -178,24 +209,28 @@ function TimeGridModal({ initial, onApply, onClose }){
   );
 }
 
+// 검색창을 닫았다 다시 열어도 필터가 유지되도록 모듈 스코프에 보관.
+const searchFilters={ q:'', cat:'전체', grade:'전체', deptSel:null, area:'전체', sub:'전체', timeSel:new Set() };
+
 // ---------- search sheet (section mode = editor, group mode = wizard) ----------
 function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose, onPreview, placed, preview }){
   const previewSec=(c,s)=>{ if(onPreview) onPreview({name:c.name,color:c.color,meets:s.meets}); };
   const previewCourse=(c)=>{ if(onPreview&&c.sections[0]) onPreview({name:c.name,color:c.color,meets:c.sections[0].meets}); };
   const clearPreview=()=>{ if(onPreview) onPreview(null); };
   const [show,setShow]=useState(false);
-  const [q,setQ]=useState('');
-  const [cat,setCat]=useState('전체');
-  const [grade,setGrade]=useState('전체');
-  const [deptSel,setDeptSel]=useState(null);
+  const [q,setQ]=useState(searchFilters.q);
+  const [cat,setCat]=useState(searchFilters.cat);
+  const [grade,setGrade]=useState(searchFilters.grade);
+  const [deptSel,setDeptSel]=useState(searchFilters.deptSel);
   const [deptOpen,setDeptOpen]=useState(false);
-  const [area,setArea]=useState('전체');
-  const [sub,setSub]=useState('전체');           // 핵심교양 하위영역
-  const [timeSel,setTimeSel]=useState(()=>new Set());
+  const [area,setArea]=useState(searchFilters.area);
+  const [sub,setSub]=useState(searchFilters.sub);           // 핵심교양 하위영역
+  const [timeSel,setTimeSel]=useState(()=>new Set(searchFilters.timeSel));
   const [timeOpen,setTimeOpen]=useState(false);
   const [open,setOpen]=useState(null);
   const inputRef=useRef(null);
   useEffect(()=>{ const t=setTimeout(()=>setShow(true),20); setTimeout(()=>inputRef.current&&inputRef.current.focus(),340); return ()=>clearTimeout(t); },[]);
+  useEffect(()=>{ Object.assign(searchFilters,{q,cat,grade,deptSel,area,sub,timeSel}); });
   const close=()=>{ setShow(false); setTimeout(onClose,300); };
 
   const pickCat=(c)=>{ setCat(c); setDeptSel(null); setArea('전체'); setSub('전체'); };
@@ -341,7 +376,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
 }
 
 // ---------- group card (wizard) ----------
-function GroupCard({ group, courseMap, onRename, onRemoveCourse, onAddClick, onDelete }){
+function GroupCard({ group, courseMap, onRename, onRemoveCourse, onAddClick, onDelete, onRemoveSection }){
   return (
     <div className="card group">
       <div className="group-head">
@@ -352,22 +387,25 @@ function GroupCard({ group, courseMap, onRename, onRemoveCourse, onAddClick, onD
       <div className="opt-list">
         {group.courseIds.map(cid=>{
           const c=courseMap[cid]; if(!c) return null;
+          const excl=(group.excludedSecs&&group.excludedSecs[cid])||[];
+          const sections=c.sections.filter(s=>!excl.includes(s.sec));
           return (
             <div key={cid}>
               <div className="opt-row">
                 <span className="swatch" style={{background:c.color.fill,borderColor:c.color.bd}}></span>
                 <div className="opt-main">
-                  <div className="opt-title">{c.name}<span className="sec-pill">{c.sections.length}분반</span></div>
+                  <div className="opt-title">{c.name}<span className="sec-pill">{sections.length}분반</span></div>
                   <div className="opt-sub">{c.code}<span className="dot">·</span>{c.credit}학점<span className="dot">·</span>{c.cat==='교양'?(c.area||'교양'):c.dept}</div>
                 </div>
                 <button className="icon-btn" onClick={()=>onRemoveCourse(group.id,cid)}><Icon name="x" size={17}/></button>
               </div>
               <div className="sec-sublist">
-                {c.sections.map(s=>(
+                {sections.map(s=>(
                   <div className="sec-sub" key={s.sec}>
                     <span className="ss-sec">{s.sec}분반</span>
                     <span className="ss-prof">{s.prof}</span>
                     <span className="ss-time">{window.TT.summarizeMeets(s.meets)}</span>
+                    <button className="icon-btn sm" onClick={()=>onRemoveSection(group.id,cid,s.sec)}><Icon name="x" size={13}/></button>
                   </div>
                 ))}
               </div>
@@ -428,7 +466,7 @@ function EditorScreen({ placed, totalCredit, onAdd, onWizard, onRemove, onSaveIm
         <button className="wizard-cta" onClick={onWizard}>
           <span className="wc-ico"><Icon name="spark" size={22}/></span>
           <span className="wc-text">
-            <span className="wc-title">최적의 시간표 만들러 가기</span>
+            <span className="wc-title">최적의 시간표 만들러 가기 (시간표 마법사)</span>
             <span className="wc-sub">꼭 들어야 할 과목들, 어느 시간대(분반)로 들어야 가장 좋은 시간표가 될까요? 가능한 조합을 다 따져서 골라드려요</span>
           </span>
           <Icon name="chevR" size={20}/>
@@ -475,7 +513,7 @@ function EditorScreen({ placed, totalCredit, onAdd, onWizard, onRemove, onSaveIm
 }
 
 // ---------- wizard (pushed screen) ----------
-function WizardScreen({ visible, groups, courseMap, stats, onBack, onRename, onRemoveCourse, onAddClick, onDelete, onAddGroup, onGenerate }){
+function WizardScreen({ visible, groups, courseMap, stats, onBack, onRename, onRemoveCourse, onRemoveSection, onAddClick, onDelete, onAddGroup, onGenerate }){
   return (
     <div className={"push-screen"+(visible?" show":"")}>
       <div className="results-nav">
@@ -495,7 +533,8 @@ function WizardScreen({ visible, groups, courseMap, stats, onBack, onRename, onR
             <div className="section-label">그룹<span className="hint">그룹마다 택 1</span></div>
             {groups.map(g=>(
               <GroupCard key={g.id} group={g} courseMap={courseMap}
-                onRename={onRename} onRemoveCourse={onRemoveCourse} onAddClick={onAddClick} onDelete={onDelete}/>
+                onRename={onRename} onRemoveCourse={onRemoveCourse} onRemoveSection={onRemoveSection}
+                onAddClick={onAddClick} onDelete={onDelete}/>
             ))}
             <button className="add-group" onClick={onAddGroup}><Icon name="plus" size={18}/> 그룹 추가</button>
           </div>
@@ -561,6 +600,8 @@ function App({ rawCourses }){
   function showToast(m){ setToast(m); setTimeout(()=>setToast(null),2000); }
 
   // ----- editor: placed -----
+  // 실제 시간표에 같이 뜨는 과목끼리 서로 구별되는 색을 쓰도록 표시 직전에 재색칠.
+  const placedColored=useMemo(()=>window.TT.recolorPicks(placed),[placed]);
   const placedKeys=useMemo(()=>new Set(placed.map(p=>p.key)),[placed]);
   const totalCredit=placed.reduce((a,p)=>a+(p.credit||0),0);
   function togglePlace(c,s){
@@ -581,15 +622,48 @@ function App({ rawCourses }){
   const delGroup=(id)=>setGroups(gs=>gs.filter(g=>g.id!==id));
   const removeCourse=(gid,cid)=>setGroups(gs=>gs.map(g=>g.id===gid?{...g,courseIds:g.courseIds.filter(x=>x!==cid)}:g));
   const addGroup=()=>{ const id='g'+(GID++); setGroups(gs=>[...gs,{id,name:'그룹 '+(gs.length+1),courseIds:[]}]); };
-  const toggleCourseInGroup=(cid)=>setGroups(gs=>gs.map(g=>{
-    if(!search||g.id!==search.gid) return g;
-    return g.courseIds.includes(cid)?{...g,courseIds:g.courseIds.filter(x=>x!==cid)}:{...g,courseIds:[...g.courseIds,cid]};
-  }));
+  function toggleCourseInGroup(cid){
+    if(!search) return;
+    const gid=search.gid;
+    const cur=groups.find(g=>g.id===gid);
+    const already=cur&&cur.courseIds.includes(cid);
+    if(!already){
+      // 같은 과목이 이미 다른 그룹의 후보로 들어가 있으면(같은 과목을 두 번 듣게 되는
+      // 무의미한 조합이 생기므로) 추가를 막고 안내만 함.
+      const dup=groups.find(g=>g.id!==gid&&g.courseIds.includes(cid));
+      if(dup){ showToast(`이미 '${dup.name}'에 있는 과목이에요`); return; }
+    }
+    setGroups(gs=>gs.map(g=>{
+      if(g.id!==gid) return g;
+      return already?{...g,courseIds:g.courseIds.filter(x=>x!==cid)}:{...g,courseIds:[...g.courseIds,cid]};
+    }));
+  }
+  // 과목 안의 분반 하나만 후보에서 뺌. 마지막 남은 분반을 빼면 과목째로 제거.
+  function excludeSection(gid,cid,sec){
+    setGroups(gs=>gs.map(g=>{
+      if(g.id!==gid) return g;
+      const curExcl=g.excludedSecs||{};
+      const list=[...(curExcl[cid]||[]),sec];
+      const course=courseMap[cid];
+      if(course&&list.length>=course.sections.length){
+        const nextExcl={...curExcl}; delete nextExcl[cid];
+        return {...g, courseIds:g.courseIds.filter(x=>x!==cid), excludedSecs:nextExcl};
+      }
+      return {...g, excludedSecs:{...curExcl,[cid]:list}};
+    }));
+  }
 
   const stats=useMemo(()=>{
     const act=groups.filter(g=>g.courseIds.length);
     const courseCount=act.reduce((a,g)=>a+g.courseIds.length,0);
-    const cart=act.reduce((a,g)=>{ const opt=g.courseIds.reduce((s,cid)=>s+(courseMap[cid]?courseMap[cid].sections.length:0),0); return a*opt; }, act.length?1:0);
+    const cart=act.reduce((a,g)=>{
+      const opt=g.courseIds.reduce((s,cid)=>{
+        const course=courseMap[cid]; if(!course) return s;
+        const excl=(g.excludedSecs&&g.excludedSecs[cid])||[];
+        return s+Math.max(0,course.sections.length-excl.length);
+      },0);
+      return a*opt;
+    }, act.length?1:0);
     return { groups:act.length, courses:courseCount, cartesian:cart };
   },[groups,courseMap]);
 
@@ -598,22 +672,29 @@ function App({ rawCourses }){
   function closeWizard(){ setWizVisible(false); setTimeout(()=>setWizOpen(false),420); }
 
   function handleGenerate(){
-    const gs=groups.map(g=>({...g,options:buildOptions(g.courseIds,courseMap)}));
+    const gs=groups.map(g=>({...g,options:buildOptions(g.courseIds,courseMap,g.excludedSecs)}));
     const data=window.TT.generate(gs,{});
     setCalc({ target:Math.max(1,data.cartesian), data });
   }
   function calcDone(){ const data=calc.data; setCalc(null); setResults(data); setTimeout(()=>setResVisible(true),20); }
+  function cancelCalc(){ setCalc(null); }
   function backFromResults(){ setResVisible(false); setTimeout(()=>setResults(null),420); }
+  function closeSearch(){ setPreview(null); setSearch(null); }
+
+  useBackClose(wizOpen, closeWizard);
+  useBackClose(!!search, closeSearch);
+  useBackClose(!!results, backFromResults);
+  useBackClose(!!calc, cancelCalc);
   function saveImage(){
     if(!placed.length){ showToast('담은 과목이 없어요'); return; }
-    const cv=window.TT.exportTimetable(placed,{title:'2026-1학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
+    const cv=window.TT.exportTimetable(placedColored,{title:'2026-1학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
     cv.toBlob(b=>{ const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download='내 시간표.png';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),1500); });
     showToast('이미지를 저장했어요');
   }
   function savePdf(){
     if(!placed.length){ showToast('담은 과목이 없어요'); return; }
-    const cv=window.TT.exportTimetable(placed,{title:'2026-1학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
+    const cv=window.TT.exportTimetable(placedColored,{title:'2026-1학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
     const url=cv.toDataURL('image/png');
     const w=window.open('','_blank');
     if(!w){ showToast('팝업을 허용하면 PDF로 저장할 수 있어요'); return; }
@@ -637,21 +718,21 @@ function App({ rawCourses }){
         </div>
       </div>
 
-      <EditorScreen placed={placed} totalCredit={totalCredit} preview={preview}
+      <EditorScreen placed={placedColored} totalCredit={totalCredit} preview={preview}
         onAdd={()=>setSearch({mode:'section'})} onWizard={openWizard} onRemove={removePlaced}
         onSaveImage={saveImage} onSavePdf={savePdf}/>
 
       {wizOpen && <WizardScreen visible={wizVisible} groups={groups} courseMap={courseMap} stats={stats}
-        onBack={closeWizard} onRename={rename} onRemoveCourse={removeCourse}
+        onBack={closeWizard} onRename={rename} onRemoveCourse={removeCourse} onRemoveSection={excludeSection}
         onAddClick={(gid)=>setSearch({mode:'group',gid})} onDelete={delGroup} onAddGroup={addGroup} onGenerate={handleGenerate}/>}
 
       {results && <ResultsScreen data={results} visible={resVisible} onBack={backFromResults} onPick={pickResult}/>}
 
       {search && <SearchSheet courses={courses} mode={search.mode}
         group={searchGroup} placedKeys={placedKeys} onPreview={setPreview}
-        placed={placed} preview={preview}
+        placed={placedColored} preview={preview}
         onPickCourse={toggleCourseInGroup} onPickSection={togglePlace}
-        onClose={()=>{ setPreview(null); setSearch(null); }}/>}
+        onClose={closeSearch}/>}
 
       {calc && <CalcOverlay target={calc.target} onDone={calcDone}/>}
       {toast && <Toast msg={toast}/>}
