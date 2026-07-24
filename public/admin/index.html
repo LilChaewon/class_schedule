@@ -23,6 +23,8 @@
     padding:12px 18px;background:var(--accent);color:#fff}
   button.ghost{background:#ececef;color:var(--label)}
   button:disabled{opacity:.45;cursor:default}
+  .campus-btn{background:#ececef;color:var(--label)}
+  .campus-btn.on{background:var(--accent);color:#fff}
   .row{display:flex;gap:10px;align-items:center}
   .hide{display:none}
   .msg{font-size:14px;margin-top:12px;padding:10px 12px;border-radius:10px}
@@ -65,11 +67,16 @@
 
   <!-- 3) 업로드 -->
   <div class="card hide" id="upload-card">
-    <label class="fld">CSV 업로드</label>
+    <label class="fld">캠퍼스</label>
+    <div class="row" id="campus-toggle" style="margin-bottom:16px">
+      <button class="campus-btn on" data-campus="자연캠퍼스" type="button">자연캠퍼스</button>
+      <button class="campus-btn" data-campus="인문캠퍼스" type="button">인문캠퍼스</button>
+    </div>
+    <label class="fld">시간표 파일 업로드</label>
     <div class="file-drop" id="file-drop">
-      여기로 CSV 파일을 끌어다 놓거나 클릭해서 선택<br>
-      <small>형식: 학교 공식 강의시간표 CSV</small>
-      <input type="file" id="file" accept=".csv,text/csv" style="display:none">
+      여기로 CSV/XLS 파일을 끌어다 놓거나 클릭해서 선택<br>
+      <small>형식: 학교 공식 강의시간표 CSV 또는 XLS</small>
+      <input type="file" id="file" accept=".csv,text/csv,.xls,.xlsx" style="display:none">
     </div>
     <div id="parse-msg"></div>
 
@@ -81,7 +88,7 @@
         <div class="stat"><b id="s-ge">0</b><span>교양</span></div>
       </div>
       <label class="fld" for="label">라벨 (학기 이름)</label>
-      <input type="text" id="label" value="2026-1" style="margin-bottom:14px">
+      <input type="text" id="label" placeholder="예: 2026-2" style="margin-bottom:14px">
       <div class="row">
         <button id="save-btn">이 데이터로 교체 저장</button>
         <button class="ghost" id="reset-btn">취소</button>
@@ -93,6 +100,8 @@
 </div>
 
 <script src="/config.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"
+  integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script src="/admin/parse.js"></script>
 <script src="/admin/admin.js"></script>
 </body>
