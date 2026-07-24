@@ -676,7 +676,14 @@ function App({ rawCourses }){
     const data=window.TT.generate(gs,{});
     setCalc({ target:Math.max(1,data.cartesian), data });
   }
-  function calcDone(){ const data=calc.data; setCalc(null); setResults(data); setTimeout(()=>setResVisible(true),20); }
+  function calcDone(){
+    const data=calc.data; setCalc(null);
+    // calc를 닫으면 useBackClose가 history.back()을 호출하는데 이 내비게이션은 비동기라,
+    // 같은 틱에 결과 화면을 바로 열면(history.pushState) 뒤늦게 도착한 popstate가 방금 연
+    // 결과 화면을 마법사 화면으로 오인해 즉시 닫아버린다(조합 만들기 후 결과가 바로 사라지는 원인).
+    // 한 틱 미뤄 그 back() 내비게이션이 먼저 끝나게 한다.
+    setTimeout(()=>{ setResults(data); setTimeout(()=>setResVisible(true),20); },50);
+  }
   function cancelCalc(){ setCalc(null); }
   function backFromResults(){ setResVisible(false); setTimeout(()=>setResults(null),420); }
   function closeSearch(){ setPreview(null); setSearch(null); }
