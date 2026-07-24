@@ -73,9 +73,11 @@ function fitsTime(meets, sel){
 const GR_SHORT = g => (g||'').replace('학년','').replace('전','전');
 
 // build 대학 › 학부 › 전공 hierarchy from major courses
-function buildDeptTree(courses){
+function buildDeptTree(courses, campus){
   const cols={}, colOrder=[];
-  courses.filter(c=>c.cat==='전공' && c.college!=='교양' && c.college!=='자연캠퍼스').forEach(c=>{
+  // 캠퍼스 공통교양 블록(과목명이 그대로 dept로 들어간 코드들, 예: 기인/기문/기사 등)은
+  // 특정 학과 소속이 아니므로 학과 트리에서 제외.
+  courses.filter(c=>c.cat==='전공' && c.college!=='교양' && c.college!==campus).forEach(c=>{
     const col=c.college||c.dept;
     if(!cols[col]){ cols[col]={name:col,schools:{},schoolOrder:[]}; colOrder.push(col); }
     const C=cols[col];
@@ -86,16 +88,17 @@ function buildDeptTree(courses){
     if(m){ if(!S.majors[c.dept]){ S.majors[c.dept]={name:m[2],dept:c.dept}; S.majorOrder.push(c.dept); } }
     else { S.self=true; }
   });
-  const ORDER=['스마트시스템공과대학','반도체·ICT대학','자연과학대학','화학·생명과학대학','예술체육대학','스포츠예술대학','건축대학','융합전공'];
+  const ORDER=['스마트시스템공과대학','반도체·ICT대학','자연과학대학','화학·생명과학대학','예술체육대학','스포츠예술대학','건축대학','융합전공',
+    'AI·SW융합대학','디지털디자인대학','인문대학','미디어·휴먼라이프대학','사회과학대학','경영대학','미래융합대학'];
   colOrder.sort((a,b)=>{ const ia=ORDER.indexOf(a),ib=ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
   return { cols, colOrder };
 }
 
 // ---------- dept tree picker modal (대학 › 학부 › 전공) ----------
-function DeptTreeModal({ courses, onApply, onClose }){
+function DeptTreeModal({ courses, campus, onApply, onClose }){
   const [show,setShow]=useState(false);
   const [exp,setExp]=useState(()=>new Set());
-  const tree=useMemo(()=>buildDeptTree(courses),[courses]);
+  const tree=useMemo(()=>buildDeptTree(courses, campus),[courses, campus]);
   useEffect(()=>{ const t=setTimeout(()=>setShow(true),20); return ()=>clearTimeout(t); },[]);
   const close=()=>{ setShow(false); setTimeout(onClose,240); };
   const toggle=(k)=>setExp(s=>{ const n=new Set(s); n.has(k)?n.delete(k):n.add(k); return n; });
@@ -213,7 +216,7 @@ function TimeGridModal({ initial, onApply, onClose }){
 const searchFilters={ q:'', cat:'전체', grade:'전체', deptSel:null, area:'전체', sub:'전체', timeSel:new Set() };
 
 // ---------- search sheet (section mode = editor, group mode = wizard) ----------
-function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose, onPreview, placed, preview }){
+function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSection, onClose, onPreview, placed, preview, campus }){
   const previewSec=(c,s)=>{ if(onPreview) onPreview({name:c.name,color:c.color,meets:s.meets}); };
   const previewCourse=(c)=>{ if(onPreview&&c.sections[0]) onPreview({name:c.name,color:c.color,meets:c.sections[0].meets}); };
   const clearPreview=()=>{ if(onPreview) onPreview(null); };
@@ -370,7 +373,7 @@ function SearchSheet({ courses, mode, group, placedKeys, onPickCourse, onPickSec
         </div>
       </div>
       {timeOpen && <TimeGridModal initial={timeSel} onApply={setTimeSel} onClose={()=>setTimeOpen(false)}/>}
-      {deptOpen && <DeptTreeModal courses={courses} onApply={setDeptSel} onClose={()=>setDeptOpen(false)}/>}
+      {deptOpen && <DeptTreeModal courses={courses} campus={campus} onApply={setDeptSel} onClose={()=>setDeptOpen(false)}/>}
     </div>
   );
 }
@@ -741,7 +744,7 @@ function App({ rawCourses, campus, onSwitchCampus }){
 
       {results && <ResultsScreen data={results} visible={resVisible} onBack={backFromResults} onPick={pickResult}/>}
 
-      {search && <SearchSheet courses={courses} mode={search.mode}
+      {search && <SearchSheet courses={courses} mode={search.mode} campus={campus}
         group={searchGroup} placedKeys={placedKeys} onPreview={setPreview}
         placed={placedColored} preview={preview}
         onPickCourse={toggleCourseInGroup} onPickSection={togglePlace}
