@@ -10,6 +10,9 @@
 <script src="config.js"></script>
 <!-- 전역 에러/거부 핸들러 → Supabase error_logs 로 전송 (CI/CD 자동 분석의 입력) -->
 <script src="error-reporter.js"></script>
+<!-- Vercel Web Analytics (빌드 없는 정적 앱이라 vanilla script 방식 사용) -->
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 <div id="root"></div>
