@@ -409,6 +409,25 @@ input{font-family:inherit;letter-spacing:inherit}
 .boot-splash{min-height:60vh;display:flex;align-items:center;justify-content:center;
   color:var(--label2,#8e8e93);font-size:15px;font-weight:500}
 
+/* 캠퍼스 선택 화면 */
+.campus-picker{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.campus-picker-inner{max-width:480px;width:100%;text-align:center}
+.campus-picker-inner h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+.campus-picker-inner p{color:var(--label2);font-size:15px;margin:0 0 28px}
+.campus-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.campus-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 16px;
+  background:var(--card);border:.5px solid var(--sep);border-radius:var(--radius);
+  box-shadow:var(--shadow);cursor:pointer;color:var(--label);font-size:16px;font-weight:700}
+.campus-card:hover{border-color:var(--accent)}
+.campus-card:active{transform:scale(.98)}
+.campus-card .cc-ico{width:44px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--accent) 13%,#fff);
+  color:var(--accent);display:flex;align-items:center;justify-content:center}
+
+/* 네브바: 현재 캠퍼스 · 전환 버튼 */
+.campus-tag{display:inline-flex;align-items:center;gap:2px;background:transparent;border:0;
+  color:var(--label2);font-size:13px;font-weight:600;cursor:pointer;padding:6px 8px;border-radius:8px}
+.campus-tag:hover{background:var(--fill);color:var(--label)}
+
 /* 검색 시트: 에디터(section 모드)에선 우측 패널로 도킹해 시간표가 안 가리게 (데스크탑) */
 @media(min-width:760px){
   .scrim.side{align-items:stretch;justify-content:flex-end;background:rgba(0,0,0,.04);backdrop-filter:none}

@@ -575,7 +575,7 @@ function seedGroups(courses){
 }
 
 // ---------- App ----------
-function App({ rawCourses }){
+function App({ rawCourses, campus, onSwitchCampus }){
   const courses=useMemo(()=>window.TT.build(rawCourses),[rawCourses]);
   const courseMap=useMemo(()=>{ const m={}; courses.forEach(c=>m[c.id]=c); return m; },[courses]);
 
@@ -717,11 +717,17 @@ function App({ rawCourses }){
 
   const searchGroup = search && search.mode==='group' ? groups.find(g=>g.id===search.gid) : null;
 
+  function switchCampus(){
+    if(placed.length && !window.confirm('캠퍼스를 바꾸면 지금 담은 과목이 초기화돼요. 계속할까요?')) return;
+    onSwitchCampus();
+  }
+
   return (
     <div className="app">
       <div className={"navbar"+(scrolled?" scrolled":"")}>
         <div className="navbar-inner">
           <div className="nbtitle">내 시간표</div>
+          {campus && <button className="campus-tag" style={{marginLeft:'auto'}} onClick={switchCampus}>{campus}<Icon name="chevR" size={13}/></button>}
         </div>
       </div>
 
@@ -762,24 +768,66 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "radius": 18
 }/*EDITMODE-END*/;
 
-// ---------- Root: Supabase 활성 카탈로그 로드 → 없으면 번들 courses.js 폴백 ----------
+// ---------- campus picker (첫 진입 화면) ----------
+function CampusPicker({ onPick }){
+  return (
+    <div className="campus-picker">
+      <div className="campus-picker-inner">
+        <h1>캠퍼스를 선택하세요</h1>
+        <p>다니는 캠퍼스에 맞는 과목으로 시간표를 짤 수 있어요. 나중에 언제든 바꿀 수 있어요.</p>
+        <div className="campus-grid">
+          {['자연캠퍼스','인문캠퍼스'].map(cp=>(
+            <button key={cp} className="campus-card" onClick={()=>onPick(cp)}>
+              <span className="cc-ico"><Icon name="spark" size={24}/></span>
+              <span className="cc-title">{cp}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyCatalog({ campus, onSwitch }){
+  return (
+    <div className="boot-splash" style={{flexDirection:'column',gap:14}}>
+      <div>{campus} 시간표가 아직 준비되지 않았어요.</div>
+      <button className="btn btn-tint" onClick={onSwitch}>다른 캠퍼스 선택</button>
+    </div>
+  );
+}
+
+// ---------- Root: 캠퍼스 선택 → Supabase 활성 카탈로그 로드 → 없으면 번들 courses.js 폴백 ----------
 function Root(){
+  const [campus,setCampus]=useState(()=>localStorage.getItem('tt_campus'));
   const [raw,setRaw]=useState(null);
+  const [empty,setEmpty]=useState(false);
+
   useEffect(()=>{
+    if(!campus) return;
     let alive=true;
+    setRaw(null); setEmpty(false);
     const env=window.__ENV__||{};
-    const fallback=()=>{ if(alive) setRaw(window.COURSES); };
+    // 자연캠퍼스만 번들 폴백 데이터(courses.js)가 있음. 인문캠퍼스는 Supabase 카탈로그가 없으면 빈 상태 표시.
+    const fallback=()=>{ if(!alive) return;
+      if(campus==='자연캠퍼스') setRaw(window.COURSES); else setEmpty(true); };
     if(!env.SUPABASE_URL||!env.SUPABASE_ANON_KEY){ fallback(); return; }
-    fetch(env.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/course_catalog?select=data&active=eq.true&limit=1',
+    fetch(env.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/course_catalog?select=data&active=eq.true&campus=eq.'+encodeURIComponent(campus)+'&limit=1',
       { headers:{ apikey:env.SUPABASE_ANON_KEY, Authorization:'Bearer '+env.SUPABASE_ANON_KEY } })
       .then(r=>r.ok?r.json():Promise.reject(r.status))
-      .then(rows=>{ const d=rows&&rows[0]&&rows[0].data;
-        if(alive) setRaw(Array.isArray(d)&&d.length?d:window.COURSES); })
+      .then(rows=>{ if(!alive) return; const d=rows&&rows[0]&&rows[0].data;
+        if(Array.isArray(d)&&d.length) setRaw(d); else fallback(); })
       .catch(()=>fallback());
     return ()=>{ alive=false; };
-  },[]);
+  },[campus]);
+
+  function pickCampus(c){ localStorage.setItem('tt_campus',c); setCampus(c); }
+  function switchCampus(){ localStorage.removeItem('tt_campus'); setCampus(null); }
+
+  if(!campus) return <CampusPicker onPick={pickCampus}/>;
+  if(empty) return <EmptyCatalog campus={campus} onSwitch={switchCampus}/>;
   if(!raw) return <div className="boot-splash">시간표를 불러오는 중…</div>;
-  return <App rawCourses={raw}/>;
+  return <App key={campus} rawCourses={raw} campus={campus} onSwitchCampus={switchCampus}/>;
 }
 
 Object.assign(window,{ Icon, App, Root });

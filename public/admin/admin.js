@@ -5,6 +5,7 @@
   var KEY = ENV.SUPABASE_ANON_KEY || '';
   var pw = '';            // 로그인 성공 시 보관 (저장 RPC 재사용)
   var parsed = null;      // 파싱된 카탈로그
+  var campus = '자연캠퍼스'; // 업로드 대상 캠퍼스
 
   var $ = function (id) { return document.getElementById(id); };
   function show(el) { el.classList.remove('hide'); }
@@ -53,19 +54,30 @@
   $('login-btn').addEventListener('click', login);
   $('pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
 
+  // ---- 캠퍼스 선택 ----
+  var CAMPUSES = ['자연캠퍼스', '인문캠퍼스'];
+  Array.prototype.forEach.call($('campus-toggle').querySelectorAll('.campus-btn'), function (btn) {
+    btn.addEventListener('click', function () {
+      campus = btn.getAttribute('data-campus');
+      Array.prototype.forEach.call($('campus-toggle').querySelectorAll('.campus-btn'), function (b) {
+        b.classList.toggle('on', b === btn);
+      });
+    });
+  });
+
   // ---- 현재 카탈로그 ----
   function loadCurrent() {
-    fetch(URL_ + '/rest/v1/course_catalog?select=label,course_count,created_at&active=eq.true&limit=1',
+    fetch(URL_ + '/rest/v1/course_catalog?select=label,course_count,created_at,campus&active=eq.true',
       { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } })
       .then(function (r) { return r.json(); })
       .then(function (rows) {
-        if (rows && rows[0]) {
-          var c = rows[0];
-          $('current-info').innerHTML = '<b>' + c.label + '</b> · ' + (c.course_count || '?') +
-            '과목 · ' + new Date(c.created_at).toLocaleString('ko-KR');
-        } else {
-          $('current-info').textContent = '아직 업로드된 카탈로그가 없어요. (앱은 기본 내장 데이터 사용 중)';
-        }
+        rows = rows || [];
+        $('current-info').innerHTML = CAMPUSES.map(function (cp) {
+          var c = rows.filter(function (r) { return r.campus === cp; })[0];
+          if (!c) return '<div><b>' + cp + '</b> · 아직 업로드된 카탈로그가 없어요' + (cp === '자연캠퍼스' ? ' (기본 내장 데이터 사용 중)' : '') + '</div>';
+          return '<div><b>' + cp + '</b> · ' + c.label + ' · ' + (c.course_count || '?') +
+            '과목 · ' + new Date(c.created_at).toLocaleString('ko-KR') + '</div>';
+        }).join('');
       })
       .catch(function () { $('current-info').textContent = '불러오기 실패'; });
   }
@@ -81,19 +93,30 @@
   });
   fileInput.addEventListener('change', function () { if (fileInput.files[0]) readFile(fileInput.files[0]); });
 
+  function isExcel(name) { return /\.xlsx?$/i.test(name || ''); }
+
   function readFile(file) {
     clearMsg($('parse-msg'));
     var reader = new FileReader();
     reader.onload = function () {
       try {
-        parsed = window.parseCatalog(reader.result);
-        if (!parsed.length) { msg($('parse-msg'), '파싱 결과가 비어 있어요. CSV 형식을 확인하세요.', 'err'); return; }
+        var text;
+        if (isExcel(file.name)) {
+          var wb = XLSX.read(new Uint8Array(reader.result), { type: 'array' });
+          var sheet = wb.Sheets[wb.SheetNames[0]];
+          text = XLSX.utils.sheet_to_csv(sheet);
+        } else {
+          text = reader.result;
+        }
+        parsed = window.parseCatalog(text);
+        if (!parsed.length) { msg($('parse-msg'), '파싱 결과가 비어 있어요. 파일 형식을 확인하세요.', 'err'); return; }
         renderPreview(file.name);
       } catch (err) {
         msg($('parse-msg'), '파싱 실패: ' + err.message, 'err');
       }
     };
-    reader.readAsText(file, 'utf-8');
+    if (isExcel(file.name)) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file, 'utf-8');
   }
 
   function renderPreview(fname) {
@@ -120,7 +143,7 @@
     var label = ($('label').value || '').trim() || 'untitled';
     clearMsg($('save-msg'));
     $('save-btn').disabled = true;
-    rpc('save_catalog', { p_password: pw, p_label: label, p_data: parsed, p_count: parsed.length })
+    rpc('save_catalog', { p_password: pw, p_label: label, p_data: parsed, p_count: parsed.length, p_campus: campus })
       .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, t: t }; }); })
       .then(function (res) {
         $('save-btn').disabled = false;
