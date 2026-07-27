@@ -463,7 +463,7 @@ function EditorScreen({ placed, totalCredit, onAdd, onWizard, onRemove, onSaveIm
     <React.Fragment>
       <div className="largetitle">
         <h1>내 시간표</h1>
-        <p>2026학년도 1학기 · 과목을 추가해 직접 짜거나, 마법사로 모든 조합을 한 번에 만들어 보세요.</p>
+        <p>2026학년도 2학기 · 과목을 추가해 직접 짜거나, 마법사로 모든 조합을 한 번에 만들어 보세요.</p>
       </div>
       <div className="page">
         <button className="wizard-cta" onClick={onWizard}>
@@ -697,14 +697,14 @@ function App({ rawCourses, campus, onSwitchCampus }){
   useBackClose(!!calc, cancelCalc);
   function saveImage(){
     if(!placed.length){ showToast('담은 과목이 없어요'); return; }
-    const cv=window.TT.exportTimetable(placedColored,{title:'2026-1학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
+    const cv=window.TT.exportTimetable(placedColored,{title:'2026-2학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
     cv.toBlob(b=>{ const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download='내 시간표.png';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),1500); });
     showToast('이미지를 저장했어요');
   }
   function savePdf(){
     if(!placed.length){ showToast('담은 과목이 없어요'); return; }
-    const cv=window.TT.exportTimetable(placedColored,{title:'2026-1학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
+    const cv=window.TT.exportTimetable(placedColored,{title:'2026-2학기 내 시간표', sub:placed.length+'과목 · '+totalCredit+'학점'});
     const url=cv.toDataURL('image/png');
     const w=window.open('','_blank');
     if(!w){ showToast('팝업을 허용하면 PDF로 저장할 수 있어요'); return; }
